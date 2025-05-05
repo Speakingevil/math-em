@@ -28,6 +28,7 @@ public class MathemScript : MonoBehaviour {
     private bool[] active = new bool[2] { true, false};
     private bool phasetwo;
     private bool tp;
+    private string time;
 
     private static int moduleIDCounter;
     private int moduleID;
@@ -102,7 +103,7 @@ public class MathemScript : MonoBehaviour {
                 return btprod < 0 ? -btprod : btprod;
             case 6: return Sqr(Math.Abs((b * b) - ((a - b) * (a - b))));
             case 7: return b == 0 ? 0 : a % b;
-            case 8: double[] t = new double[4] { Math.Log10(a), Math.Log10(b), Math.Log10((a + b) / 2), 0};
+            case 8: double[] t = new double[4] { Math.Log10(a), Math.Log10(b), Math.Log10((a + b) / 2f), 0};
                 t[3] = t[0] + t[1] - t[2];
                 return (long)Math.Pow(10, t[3]);
             case 10: int[] l = new int[2] { (int)Math.Log10(a) + 1, (int)Math.Log10(b) + 1};
@@ -110,10 +111,30 @@ public class MathemScript : MonoBehaviour {
             case 14: return b == 0 ? 0 : (a % b == 0 ? 0 : b % (a % b));
             default: string[] bin = new string[2] { Bin(a), Bin(b)};            
                 long output = 0;
-                string xor = "";
                 long d = 1;
                 if (k == 22)
                     return bin[0].Count(x => x == 'T') * bin[1].Count(x => x == 'T');
+                else if(k == 30)
+                {
+                    string[] gray = new string[2] { "T", "T"};
+                    for(int i = 0; i < 2; i++)
+                        for(int j = bin[i].Length - 1; j >= 1; j--)
+                            gray[i] += ((bin[i][j] == 'T') ^ (bin[i][j - 1] == 'T')) ? "T" : "F";
+                    string[] xor = new string[2] { "", "F" };
+                    for (int i = gray[1].Length; i < gray[0].Length; i++)
+                        gray[1] = "F" + gray[1];
+                    for (int i = 0; i < gray[0].Length; i++)
+                        xor[0] += ((gray[0][i] == 'T') ^ (gray[1][i] == 'T')) ? "T" : "F";
+                    for (int i = 1; i <= xor[0].Length; i++)
+                        xor[1] += ((xor[1][i - 1] == 'T') ^ (xor[0][i - 1] == 'T')) ? "T" : "F";
+                    for(int i = xor[1].Length - 1; i >= 0; i--)
+                    {
+                        if (xor[1][i] == 'T')
+                            output += d;
+                        d *= 2;
+                    }
+                    return output;
+                }
                 for (int i = 0; i < bin[0].Length; i++)
                 {
                     switch (k)
@@ -130,24 +151,7 @@ public class MathemScript : MonoBehaviour {
                             if (i < bin[1].Length && bin[0][i] == 'T' && bin[1][i] == 'T')
                                 output += d;
                             break;
-                        default:
-                            if (bin[0][i] == 'F' ^ (i >= bin[1].Length || bin[1][i] == 'F'))
-                                xor += 'T';
-                            else
-                                xor += 'F';
-                            break;
                     }
-                    if(k != 30)
-                        d *= 2;
-                }
-                if(k != 30)
-                    return output;
-                int z = xor.Length;
-                d = 1;
-                for(int i = 0; i < z; i++)
-                {
-                    if (xor[(i + 1) % z] == 'T' ^ (xor[i] == 'T' || xor[(i + z - 1) % z] == 'T'))
-                        output += d;
                     d *= 2;
                 }
                 return output;
@@ -194,10 +198,10 @@ public class MathemScript : MonoBehaviour {
             case 6:
                 switch (s)
                 {
-                    case 0: return ((int)info.GetTime() / 60) % 10;
-                    case 1: return DateTime.Now.Minute % 10;
-                    case 2: return DateTime.Now.Hour % 10;
-                    default: return DateTime.Today.Day % 10;
+                    case 0: return DateTime.Now.Minute % 10;
+                    case 1: return DateTime.Now.Hour % 10;
+                    case 2: return DateTime.Today.Day % 10;
+                    default: return DateTime.Today.Month % 10;
                 }
             case 7:
                 switch (s)
@@ -240,7 +244,7 @@ public class MathemScript : MonoBehaviour {
                     }
                     break;
                 default:
-                    if(i > 0 && i < 15 && tprops[s[i + 1], 0] < 2 && !(i == 1 && tprops[s[0], 0] == 2))
+                    if(i > 0 && i < 15 && tprops[s[i + 1], 0] < 2 && !(i == 1 && tprops[s[0], 0] == 2) && !(i == 2 && tprops[s[1], 0] == 2 && tprops[s[0], 0] == 2))
                     {
                         nums.Add(d);
                         d = 0;
@@ -249,14 +253,10 @@ public class MathemScript : MonoBehaviour {
             }
         }
         nums.Add(d);
-        if (tprops[s[15], 0] == 2)
-        {
-            nums.Add(nums[0]);
-            if (tprops[s[0], 0] == 2)
-                nums.Insert(0, nums[nums.Count() - 2]);
-        }
-        else if (tprops[s[0], 0] == 2)
+        if (tprops[s[0], 0] == 2)
             nums.Insert(0, nums.Last());
+        if (tprops[s[15], 0] == 2)
+            nums.Add(nums[0]);
         Debug.LogFormat("[Math 'em #{0}] The arrangement yields the values: {1}", moduleID, string.Join(", ", nums.Select(k => k.ToString()).ToArray()));
         int ind = 0;
         ans = nums[0];
@@ -289,6 +289,7 @@ public class MathemScript : MonoBehaviour {
         }
         ans %= 100000000;
         Debug.LogFormat("[Math 'em #{0}] The final answer is {1}.", moduleID, ans);
+        time = DateTime.Now.ToString();
     }
 
     private int[] Swap(int[] x)
@@ -568,6 +569,11 @@ public class MathemScript : MonoBehaviour {
     {
         yield return null;
         command = command.ToLowerInvariant();
+        if(command == "time")
+        {
+            yield return "sendtochat Time of activation: " + time;
+            yield break;
+        }
         if(command == "activate")
         {
             if (active[1])
@@ -630,74 +636,51 @@ public class MathemScript : MonoBehaviour {
         }
     }
 
-    // Autosolver by Kilo Bites
-
     IEnumerator TwitchHandleForcedSolve()
     {
         yield return null;
-
         while (!active[0])
-        {
             yield return true;
-        }
-
         if (disp.text != "0")
-        {
             while (!ans.ToString().StartsWith(disp.text))
             {
                 if (disp.text == "0")
-                {
                     break;
-                }
                 keys[10].OnInteract();
                 yield return new WaitForSeconds(0.1f);
             }
-        }
-
         if (!phasetwo && !active[1])
         {
-
             var answerKeyA = ans.ToString().Select(x => "0123456789".IndexOf(x)).ToArray();
             var startingIx = disp.text == "0" ? 0 : disp.text.Length;
-
             for (int i = startingIx; i < answerKeyA.Length; i++)
             {
                 keys[answerKeyA[i]].OnInteract();
                 yield return new WaitForSeconds(0.1f);
             }
-
             keys[11].OnInteract();
             yield return new WaitForSeconds(0.1f);
-
             while (!active[1])
-            {
                 yield return true;
-            }
         }
-
         if (active[1])
         {
             keys[12].OnInteract();
             yield return new WaitForSeconds(0.1f);
         }
         while (!active[0])
-        {
             yield return true;
-        }
         if (phasetwo)
         {
             var answerKeyB = ans.ToString().Select(x => "0123456789".IndexOf(x)).ToArray();
             var startingIx = disp.text == "0" ? 0 : disp.text.Length;
-
             for (int i = startingIx; i < answerKeyB.Length; i++)
             {
                 keys[answerKeyB[i]].OnInteract();
                 yield return new WaitForSeconds(0.1f);
             }
-
             keys[11].OnInteract();
             yield return new WaitForSeconds(0.1f);
-            
         }
     }
 }
